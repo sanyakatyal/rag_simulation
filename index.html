@@ -2,36 +2,35 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>RAG Simulator</title>
+<title>RAG Pipeline Visualizer</title>
 
 <style>
 
 body{
-font-family: Inter, sans-serif;
+font-family:Inter,system-ui;
 background:#0f172a;
 color:white;
 margin:0;
-padding:0;
-}
-
-.container{
-max-width:1100px;
-margin:auto;
 padding:40px;
 }
 
 h1{
 text-align:center;
-margin-bottom:10px;
+margin-bottom:5px;
 }
 
 .subtitle{
 text-align:center;
 color:#94a3b8;
-margin-bottom:40px;
+margin-bottom:30px;
 }
 
-.searchBox{
+.container{
+max-width:1100px;
+margin:auto;
+}
+
+.controls{
 display:flex;
 gap:10px;
 margin-bottom:30px;
@@ -46,13 +45,13 @@ font-size:16px;
 }
 
 button{
-padding:12px 20px;
-background:#6366f1;
+padding:12px 18px;
 border:none;
 border-radius:8px;
-color:white;
 cursor:pointer;
-font-weight:bold;
+background:#6366f1;
+color:white;
+font-weight:600;
 }
 
 button:hover{
@@ -70,38 +69,58 @@ background:#1e293b;
 padding:20px;
 border-radius:12px;
 min-height:120px;
+opacity:0.2;
+transform:scale(.95);
+transition:all .5s ease;
+}
+
+.card.active{
+opacity:1;
+transform:scale(1);
+border:2px solid #6366f1;
 }
 
 .card h3{
 margin-top:0;
-font-size:16px;
 color:#a5b4fc;
+font-size:15px;
 }
 
 .chunk{
 background:#334155;
-padding:10px;
-border-radius:8px;
+padding:8px;
+margin-top:8px;
+border-radius:6px;
+font-size:14px;
+}
+
+.vector{
+font-family:monospace;
+font-size:13px;
+margin-top:5px;
+color:#cbd5f5;
+}
+
+.prompt{
+font-size:13px;
+white-space:pre-line;
+}
+
+.answer{
+color:#22c55e;
+font-weight:600;
 margin-top:8px;
 }
 
-.result{
-margin-top:30px;
+.kb{
+margin-top:40px;
 background:#1e293b;
 padding:20px;
 border-radius:12px;
 }
 
-.step{
-margin-top:10px;
-font-size:14px;
-color:#cbd5f5;
-}
-
-.highlight{
-background:#6366f1;
-padding:2px 6px;
-border-radius:4px;
+.kb h3{
+margin-top:0;
 }
 
 </style>
@@ -112,55 +131,57 @@ border-radius:4px;
 <div class="container">
 
 <h1>RAG Pipeline Simulator</h1>
-<div class="subtitle">Interactive demo of Retrieval Augmented Generation</div>
+<div class="subtitle">Step-by-step animation of Retrieval Augmented Generation</div>
 
-<div class="searchBox">
-<input id="query" placeholder="Ask a question about AI..."/>
-<button onclick="runRAG()">Run RAG</button>
+<div class="controls">
+<input id="query" placeholder="Ask something about AI...">
+<button onclick="startRAG()">Start</button>
+<button onclick="nextStep()">Next Step</button>
 </div>
 
 <div class="pipeline">
 
-<div class="card">
+<div class="card" id="step1">
 <h3>1. User Query</h3>
-<div id="queryDisplay"></div>
+<div id="queryBox"></div>
 </div>
 
-<div class="card">
-<h3>2. Query Embedding</h3>
-<div id="embedding"></div>
+<div class="card" id="step2">
+<h3>2. Embedding Creation</h3>
+<div id="embeddingBox"></div>
 </div>
 
-<div class="card">
-<h3>3. Vector Search</h3>
-<div id="vectorSearch"></div>
+<div class="card" id="step3">
+<h3>3. Vector Similarity Search</h3>
+<div id="vectorBox"></div>
 </div>
 
-<div class="card">
+<div class="card" id="step4">
 <h3>4. Retrieved Chunks</h3>
-<div id="retrieved"></div>
+<div id="retrievalBox"></div>
 </div>
 
-<div class="card">
-<h3>5. Augmented Prompt</h3>
-<div id="prompt"></div>
+<div class="card" id="step5">
+<h3>5. Prompt Augmentation</h3>
+<div id="promptBox"></div>
 </div>
 
-<div class="card">
+<div class="card" id="step6">
 <h3>6. LLM Response</h3>
-<div id="response"></div>
+<div id="responseBox"></div>
 </div>
 
 </div>
 
-<div class="result">
+<div class="kb">
+
 <h3>Knowledge Base</h3>
 
-<div class="chunk">RAG stands for Retrieval Augmented Generation and improves LLM accuracy.</div>
-<div class="chunk">Embeddings convert text into vectors for semantic similarity search.</div>
-<div class="chunk">Vector databases store embeddings and allow fast retrieval.</div>
-<div class="chunk">Chunking splits documents into smaller passages for better retrieval.</div>
-<div class="chunk">The retrieved chunks are added to the prompt before sending to the LLM.</div>
+<div class="chunk">RAG improves LLM answers by retrieving external knowledge.</div>
+<div class="chunk">Embeddings convert text into high-dimensional vectors.</div>
+<div class="chunk">Vector databases store embeddings for fast similarity search.</div>
+<div class="chunk">Chunking splits documents into smaller passages.</div>
+<div class="chunk">Retrieved chunks are injected into the LLM prompt.</div>
 
 </div>
 
@@ -169,64 +190,122 @@ border-radius:4px;
 <script>
 
 const knowledge = [
-"RAG stands for Retrieval Augmented Generation and improves LLM accuracy.",
-"Embeddings convert text into vectors for semantic similarity search.",
-"Vector databases store embeddings and allow fast retrieval.",
-"Chunking splits documents into smaller passages for better retrieval.",
-"The retrieved chunks are added to the prompt before sending to the LLM."
+"RAG improves LLM answers by retrieving external knowledge.",
+"Embeddings convert text into high-dimensional vectors.",
+"Vector databases store embeddings for fast similarity search.",
+"Chunking splits documents into smaller passages.",
+"Retrieved chunks are injected into the LLM prompt."
 ];
 
-function fakeEmbedding(text){
-return Array.from({length:5},()=>Math.random().toFixed(2));
+let step = 0
+let query = ""
+let retrieved = []
+
+function randomVector(){
+return Array.from({length:6},()=>Math.random().toFixed(2))
 }
 
-function similarity(a,b){
-return Math.random();
+function similarity(){
+return Math.random()
 }
 
-function runRAG(){
+function activate(n){
 
-let query=document.getElementById("query").value;
+document.querySelectorAll(".card").forEach(c=>c.classList.remove("active"))
 
-document.getElementById("queryDisplay").innerHTML=query;
+document.getElementById("step"+n).classList.add("active")
 
-let embedding=fakeEmbedding(query);
+}
 
-document.getElementById("embedding").innerHTML=
-"<div class='step'>Vector: ["+embedding.join(", ")+"]</div>";
+function startRAG(){
+
+step = 0
+
+query = document.getElementById("query").value
+
+document.querySelectorAll(".card").forEach(c=>c.classList.remove("active"))
+
+}
+
+function nextStep(){
+
+step++
+
+if(step===1){
+
+activate(1)
+
+document.getElementById("queryBox").innerHTML=query
+
+}
+
+if(step===2){
+
+activate(2)
+
+let emb=randomVector()
+
+document.getElementById("embeddingBox").innerHTML=
+`<div class="vector">[${emb.join(", ")}]</div>`
+
+}
+
+if(step===3){
+
+activate(3)
 
 let scores=knowledge.map(k=>{
 return{
 text:k,
-score:similarity(query,k)
-};
-});
+score:similarity()
+}
+})
 
-scores.sort((a,b)=>b.score-a.score);
+scores.sort((a,b)=>b.score-a.score)
 
-let top=scores.slice(0,2);
+retrieved=scores.slice(0,2)
 
-document.getElementById("vectorSearch").innerHTML=
-scores.map(s=>`<div class='step'>${s.score.toFixed(2)}</div>`).join("");
+document.getElementById("vectorBox").innerHTML=
+scores.map(s=>`<div class="vector">${s.score.toFixed(2)}</div>`).join("")
 
-document.getElementById("retrieved").innerHTML=
-top.map(t=>`<div class='chunk'>${t.text}</div>`).join("");
+}
 
-let prompt=`Context:
-${top.map(t=>t.text).join("\n")}
+if(step===4){
+
+activate(4)
+
+document.getElementById("retrievalBox").innerHTML=
+retrieved.map(r=>`<div class="chunk">${r.text}</div>`).join("")
+
+}
+
+if(step===5){
+
+activate(5)
+
+let prompt =
+`Context:
+${retrieved.map(r=>r.text).join("\n")}
 
 Question: ${query}
-Answer:`;
 
+Answer:`
 
-document.getElementById("prompt").innerHTML=
-`<div class="step">${prompt}</div>`;
+document.getElementById("promptBox").innerHTML=
+`<div class="prompt">${prompt}</div>`
 
+}
 
-let response="Based on retrieved knowledge: " + top.map(t=>t.text).join(" ");
+if(step===6){
 
-document.getElementById("response").innerHTML=
-`<div class="step highlight">${response}</div>`;
+activate(6)
+
+let answer="Based on retrieved knowledge: " + retrieved.map(r=>r.text).join(" ")
+
+document.getElementById("responseBox").innerHTML=
+`<div class="answer">${answer}</div>`
+
+}
 
 }
 
