@@ -1,1 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RAG Simulator</title>
 
+<style>
+
+body{
+font-family: Inter, sans-serif;
+background:#0f172a;
+color:white;
+margin:0;
+padding:0;
+}
+
+.container{
+max-width:1100px;
+margin:auto;
+padding:40px;
+}
+
+h1{
+text-align:center;
+margin-bottom:10px;
+}
+
+.subtitle{
+text-align:center;
+color:#94a3b8;
+margin-bottom:40px;
+}
+
+.searchBox{
+display:flex;
+gap:10px;
+margin-bottom:30px;
+}
+
+input{
+flex:1;
+padding:12px;
+border-radius:8px;
+border:none;
+font-size:16px;
+}
+
+button{
+padding:12px 20px;
+background:#6366f1;
+border:none;
+border-radius:8px;
+color:white;
+cursor:pointer;
+font-weight:bold;
+}
+
+button:hover{
+background:#4f46e5;
+}
+
+.pipeline{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:20px;
+}
+
+.card{
+background:#1e293b;
+padding:20px;
+border-radius:12px;
+min-height:120px;
+}
+
+.card h3{
+margin-top:0;
+font-size:16px;
+color:#a5b4fc;
+}
+
+.chunk{
+background:#334155;
+padding:10px;
+border-radius:8px;
+margin-top:8px;
+}
+
+.result{
+margin-top:30px;
+background:#1e293b;
+padding:20px;
+border-radius:12px;
+}
+
+.step{
+margin-top:10px;
+font-size:14px;
+color:#cbd5f5;
+}
+
+.highlight{
+background:#6366f1;
+padding:2px 6px;
+border-radius:4px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>RAG Pipeline Simulator</h1>
+<div class="subtitle">Interactive demo of Retrieval Augmented Generation</div>
+
+<div class="searchBox">
+<input id="query" placeholder="Ask a question about AI..."/>
+<button onclick="runRAG()">Run RAG</button>
+</div>
+
+<div class="pipeline">
+
+<div class="card">
+<h3>1. User Query</h3>
+<div id="queryDisplay"></div>
+</div>
+
+<div class="card">
+<h3>2. Query Embedding</h3>
+<div id="embedding"></div>
+</div>
+
+<div class="card">
+<h3>3. Vector Search</h3>
+<div id="vectorSearch"></div>
+</div>
+
+<div class="card">
+<h3>4. Retrieved Chunks</h3>
+<div id="retrieved"></div>
+</div>
+
+<div class="card">
+<h3>5. Augmented Prompt</h3>
+<div id="prompt"></div>
+</div>
+
+<div class="card">
+<h3>6. LLM Response</h3>
+<div id="response"></div>
+</div>
+
+</div>
+
+<div class="result">
+<h3>Knowledge Base</h3>
+
+<div class="chunk">RAG stands for Retrieval Augmented Generation and improves LLM accuracy.</div>
+<div class="chunk">Embeddings convert text into vectors for semantic similarity search.</div>
+<div class="chunk">Vector databases store embeddings and allow fast retrieval.</div>
+<div class="chunk">Chunking splits documents into smaller passages for better retrieval.</div>
+<div class="chunk">The retrieved chunks are added to the prompt before sending to the LLM.</div>
+
+</div>
+
+</div>
+
+<script>
+
+const knowledge = [
+"RAG stands for Retrieval Augmented Generation and improves LLM accuracy.",
+"Embeddings convert text into vectors for semantic similarity search.",
+"Vector databases store embeddings and allow fast retrieval.",
+"Chunking splits documents into smaller passages for better retrieval.",
+"The retrieved chunks are added to the prompt before sending to the LLM."
+];
+
+function fakeEmbedding(text){
+return Array.from({length:5},()=>Math.random().toFixed(2));
+}
+
+function similarity(a,b){
+return Math.random();
+}
+
+function runRAG(){
+
+let query=document.getElementById("query").value;
+
+document.getElementById("queryDisplay").innerHTML=query;
+
+let embedding=fakeEmbedding(query);
+
+document.getElementById("embedding").innerHTML=
+"<div class='step'>Vector: ["+embedding.join(", ")+"]</div>";
+
+let scores=knowledge.map(k=>{
+return{
+text:k,
+score:similarity(query,k)
+};
+});
+
+scores.sort((a,b)=>b.score-a.score);
+
+let top=scores.slice(0,2);
+
+document.getElementById("vectorSearch").innerHTML=
+scores.map(s=>`<div class='step'>${s.score.toFixed(2)}</div>`).join("");
+
+document.getElementById("retrieved").innerHTML=
+top.map(t=>`<div class='chunk'>${t.text}</div>`).join("");
+
+let prompt=`Context:
+${top.map(t=>t.text).join("\n")}
+
+Question: ${query}
+Answer:`;
+
+
+document.getElementById("prompt").innerHTML=
+`<div class="step">${prompt}</div>`;
+
+
+let response="Based on retrieved knowledge: " + top.map(t=>t.text).join(" ");
+
+document.getElementById("response").innerHTML=
+`<div class="step highlight">${response}</div>`;
+
+}
+
+</script>
+
+</body>
+</html>
